@@ -22,6 +22,7 @@ class Cell:
         self.neiMine = None
         self.cellX= None
         self.cellY= None
+        self.safety = False
 
 #Generate a mine sweeper board, takes in d the dimension size, and n, the number of mines
 #Board is 2d Array of Cells, after making the 2d array of cells, it will insert the mines based on n and update the cells to include the actual number of neighbor cells
@@ -269,6 +270,64 @@ def basicAI(board):
                     board[i][j].state = 'clear'
 
     return board
+
+
+#An improved agent to play minesweeper
+#Constraint Satisfaction Approach? 
+def improvedAI(board):
+    confirmation = False
+    kb = deepcopy(board)
+    #Guarantee Cases of Basic Mines
+    #If mine neighbors = hidden neighbors, all hidden neighbors are mines
+    for i in range(len(kb)):
+        for j in range(len(kb[i])):
+            checkNeiMine(kb,i,j)
+            checkNeiHidden(kb,i,j)
+            if kb[i][j].state == 'clear' and kb[i][j].nei - kb[i][j].neiMine == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
+                confirmation = True
+                board = updateResult(board,i,j,'mined')
+    #If 8-Clue minus number of safe neighbors is hidden neighbors, all neighbors are safe
+    for i in range(len(kb)):
+        for j in range(len(kb[i])):
+            checkMine(kb,i,j)
+            checkNeiSafe(kb,i,j)
+            checkNeiHidden(kb,i,j)
+            if kb[i][j].state == 'clear' and 8 - kb[i][j].nei - kb[i][j].neiSafe  == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
+                print(i)
+                print(j)
+                confirmation = True
+                board =  updateResult(board,i,j,'clear')
+    #Constraint Satisfaction Cases?
+    #hypothetical, make a cell a mine, if breaks constraint, label cell as safety, Choose a cell among safe Cells to Flip
+    #We can take this further, to checking if multiple changes breaks constraint
+    if confirmation == False:
+        counter = 0
+        for i in range(len(kb)):
+            for j in range(len(kb[i])):
+                if kb[i][j].state == 'uncovered' and checkConstraint(kb,i,j) == True:
+                    kb[i][j].safety = True
+                    counter = counter + 1
+        rand = random.randint(1,counter)
+        counter = 0
+        for i in range(len(kb)):
+            for j in range(len(kb[i])):
+                if kb[i][j].safety == True:
+                    counter = counter + 1
+                    if kb[i][j].state == 'uncovered' and counter == rand:
+                        board[i][j].state = 'clear'
+
+
+def checkConstraint(board,x,y):
+    tmpboard = deepcopy(board)
+    tmpboard[x][y].state = 'mined'
+    for i in range(len(tmpboard)):
+        for j in range(len(tmpboard[i])):
+            if tmpboard[i][j].neiMine > tmpboard[i][j].nei and tmpboard[i][j].state == 'clear':
+                return False
+    return True
+
+
+
 
 
 tmp = generateBoard(9,10)

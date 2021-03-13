@@ -27,7 +27,9 @@ pygame.display.set_caption('MineSweeper!')
 
 #Set dimensions for the board and create board 
 dimen = 8
-tmpboard = minesweepai.generateBoard(dimen,10)
+mineNumb = 5
+tmpboard = minesweepai.generateBoard(dimen,mineNumb)
+
 
 def gamestart():
     #Initialize Stuff
@@ -35,6 +37,13 @@ def gamestart():
     text1 = font2.render("Single Play",1,BLACK)
     text2 = font2.render("Basic AI",1,BLACK)
     text3 = font2.render("Improved AI",1,BLACK)
+    flagMine = 0
+    rip = False
+    text4 = font2.render("Mines Flagged:" + str(flagMine),1,BLACK)
+
+    win = font.render("You Win!",1,GREEN)
+    lose = font.render("You Lose :(",1,(255,0,0))
+
     #Event Starto
     start = True
     while start:
@@ -48,9 +57,15 @@ def gamestart():
                 #Run Basic AI
                 if 525 <= mouse[0] <= 525+140 and 120 <= mouse[1] <= 120+40:
                     minesweepai.basicAI(tmpboard)
+                    flagMine, rip = checkWin(tmpboard,dimen)
                 #Run Advanced AI
                 if 525 <= mouse[0] <= 525+140 and 170 <= mouse[1] <= 170+40:
+                    minesweepai.improvedAI(tmpboard)
+                    flagMine, rip = checkWin(tmpboard,dimen)
                     print('clicked')
+
+
+        text4 = font2.render("Mines Flagged:" + str(flagMine),1,BLACK)
 
         screen.fill(BLACK)
         #Generate the board on UI based on board generated
@@ -71,6 +86,8 @@ def gamestart():
         screen.blit(text2, (530,130))
         screen.blit(text3, (530,180))
 
+        screen.blit(text4, (530,220))
+
         #Leaving if for coordinates of possible future buttons
         '''
         #Add text to Buttons
@@ -82,6 +99,10 @@ def gamestart():
         screen.blit(text6, (530,330))
         screen.blit(text35, (530,380))
         '''
+        if flagMine == mineNumb:
+            screen.blit(win,(500,420))
+        if rip == True:
+            screen.blit(lose,(500,420))
 
         #update screen
         pygame.display.update()
@@ -99,6 +120,20 @@ def activateCell(board,x,mouse):
                 board[row][column].state = 'clear'
                 print('reached')
     return WIDTH,HEIGHT
+
+#updates winning and losing scenario
+def checkWin(board,x):
+    counter = 0
+    kaboom = False
+    for row in range(x):
+        for column in range(x):
+            if board[column][row].state == 'mined':
+                counter = counter + 1
+            if board[column][row].state == 'clear' and board[column][row].mine == True:
+                kaboom = True
+
+
+    return counter, kaboom
 
 #Generate the initial maze based on board generated
 #Draws everything onto Pygames
