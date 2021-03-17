@@ -356,7 +356,9 @@ def improvedAI(board):
                         if counter == rand:
                             board[i][j].state = 'clear'
         elif boole == True:
-            # Choose Cell thats safe in CSF solutiopn
+            # Choose Cell thats safe in CSF solution
+            #CURRENTLY CHOOSES A CELL RANDOMLY IN THE CSF SOLUTION
+            #WE SHOULD MAKE IT CHOOSE A CELL AS CLOSE TO A CLUE AS POSSIBLE
             counter = 0
             for i in range(len(kb2)):
                 for j in range(len(kb2[i])):
@@ -422,7 +424,9 @@ def applyChanges(board, x):
     return board
 
 #Generates the children of possible positions of where a mine might be based on situation
-#only considers one mine at the moment, need to add multiple cases
+#CURRENTLY ONLY THINKS ABOUT A DIFFERENCE OF ONE MINE ONLY
+#NEED TO SOMEHOW ACCOUNT FOR MULTIPLE MINES, CURRENTLY CALLED WHEN CLUE > NUMBER OF REVEALED MINES,
+#CURRENTLY ONLY WORKS IDEALLY WHEN THAT DIFFERENCE IS 1
 def generateValidChildren(board,x,y):
     children = Changes(x,y)
     tmp = deepcopy(board)
