@@ -334,50 +334,74 @@ def improvedAI(board):
                 board =  updateResult(board,i,j,'clear')
     #Constraint Satisfaction Cases?
     #hypothetical, rn, fill up mines based on clues randomly that satisfy constraints, then work in that direction
-    '''
+ 
     if confirmation == False:
-        counter = 0
-        for i in range(len(kb)):
-            for j in range(len(kb[i])):
-                if kb[i][j].state == 'uncovered' and checkConstraint(kb,i,j) == True:
-                    kb[i][j].safety = True
-                    counter = counter + 1
-        rand = random.randint(1,counter)
-        counter = 0
-        for i in range(len(kb)):
-            for j in range(len(kb[i])):
-                if kb[i][j].safety == True:
-                    counter = counter + 1
-                    if kb[i][j].state == 'uncovered' and counter == rand:
-                        board[i][j].state = 'clear'
-        '''
+        kb2 = deepcopy(board)
+        #print(generateSolutions(kb2))
+        boole, kb2 = generateSolutions(kb2)
+        #No Optimal solution found, select a cell at random
+        if boole == False:
+          #Choose Cell at Random
+            counter = 0
+            for i in range(len(kb)):
+                for j in range(len(kb[i])):
+                    if kb[i][j].state == 'uncovered':
+                        counter = counter + 1
+            rand = random.randint(1,counter)
+            counter = 0
+            for i in range(len(kb)):
+                for j in range(len(kb[i])):
+                    if kb[i][j].state == 'uncovered':
+                        counter = counter + 1
+                        if counter == rand:
+                            board[i][j].state = 'clear'
+        elif boole == True:
+            # Choose Cell thats safe in CSF solutiopn
+            counter = 0
+            for i in range(len(kb2)):
+                for j in range(len(kb2[i])):
+                    if kb[i][j].state == 'uncovered':
+                        counter = counter + 1
+            rand = random.randint(1,counter)
+            counter = 0
+            for i in range(len(kb2)):
+                for j in range(len(kb2[i])):
+                    if kb2[i][j].state == 'uncovered':
+                        counter = counter + 1
+                        if counter == rand:
+                            board[i][j].state = 'clear'
+
     return board
 
-
-
-
-
-
+#Based on Cell information, generate solutions
+#if can find a solution that satisfies constraints, return true and the board
+#otherwise, return false
 def generateSolutions(board):
     #create copy for temp solution that satisfies constraints
     kb = deepcopy(board)
     validOptions = []
-
     #For each constraint, check current number of mined/clear+boom
     for i in range(len(kb)):
         for j in range(len(kb[i])):
             if kb[i][j].state == 'clear' and kb[i][j].mine == False:
-                mineCount = checkNeiBoom(kb,i,j) + checkNeiMine(kb,i,j)
+                checkNeiBoom(kb,i,j)
+                checkNeiMine(kb,i,j)
+                mineCount = kb[i][j].neiBoom + kb[i][j].neiMine
                 if mineCount < kb[i][j].nei:
                     validOptions.append(generateValidChildren(kb,i,j))
-    
-
+ 
     numb = len(validOptions)
+    for c in range(numb):
+        kb = deepcopy(board)
+        numb2 = len(validOptions[c])
+        for d in range(numb2):
+            kb = applyChanges(kb,validOptions[c][d])
+        if checkConstraint(kb) == True:
+            return True, kb
+    return False, kb
 
 
-
-    print('generated')
-
+#Apply changes of changes found that hopefully will not break constraint
 def applyChanges(board, x):
     if x.change == 'left':
         board[x.x-1][x.y].state = 'mined'
@@ -397,7 +421,8 @@ def applyChanges(board, x):
         board[x.x+1][x.y+1].state = 'mined'
     return board
 
-#1 missing Mine
+#Generates the children of possible positions of where a mine might be based on situation
+#only considers one mine at the moment, need to add multiple cases
 def generateValidChildren(board,x,y):
     children = Changes(x,y)
     tmp = deepcopy(board)
@@ -452,21 +477,25 @@ def generateValidChildren(board,x,y):
     return validChil
 
 
-
+#Checks if the current state of the board satisfies constraints
 def checkConstraint(board):
     tmpboard = deepcopy(board)
     for i in range(len(tmpboard)):
         for j in range(len(tmpboard[i])):
+            checkNeiBoom(tmpboard,i,j)
+            checkNeiMine(tmpboard,i,j)
             if tmpboard[i][j].neiMine + tmpboard[i][j].neiBoom > tmpboard[i][j].nei and tmpboard[i][j].state == 'clear':
                 return False
     return True
 
+#checks if the game is over in that there are no more uncovered cells
 def checkAllClear(board):
     for i in range(len(board)):
         for j in range(len(board[i])):
             if board[i][j].state == 'uncovered':
                 return False
     return True
+#Counts the number of mined cells for final score
 def countMined(board):
     count = 0
     for i in range(len(board)):
@@ -476,11 +505,7 @@ def countMined(board):
     return count
 
 
-
-
-
-
-#Get the Data for graph
+#Get the Data for graph, x is number of runs
 def getData(x):
     sum = 0
     for i in range(x):
@@ -491,7 +516,7 @@ def getData(x):
         sum = sum + countMined(tmp)
     print(sum)
 
- #Get the Data for graph
+ #Get the Data for graph for improved agent, x is number of runs
 def getDataImp(x):
     sum = 0
     for i in range(x):
@@ -505,6 +530,6 @@ def getDataImp(x):
 
 
 
-getData(10)
-#getDataImp(10)
+getData(50)
+#getDataImp(50)
 
