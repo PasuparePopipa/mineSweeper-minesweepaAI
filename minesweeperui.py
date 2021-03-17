@@ -27,7 +27,7 @@ pygame.display.set_caption('MineSweeper!')
 
 #Set dimensions for the board and create board 
 dimen = 8
-mineNumb = 5
+mineNumb = 10
 tmpboard = minesweepai.generateBoard(dimen,mineNumb)
 
 
@@ -40,7 +40,6 @@ def gamestart():
     flagMine = 0
     rip = False
     text4 = font2.render("Mines Flagged:" + str(flagMine),1,BLACK)
-
     win = font.render("You Win!",1,GREEN)
     lose = font.render("You Lose :(",1,(255,0,0))
 
@@ -193,6 +192,12 @@ def genBoard(board,x):
             if board[row][column].state == 'clear' and board[row][column].mine == True :
                 cell = boom
             screen.blit(cell,[(MARGIN + WIDTH) * column + MARGIN,(MARGIN + HEIGHT) * row + MARGIN,WIDTH,HEIGHT])
+
+
+
+
+
+
 
 
 #Game Starto
