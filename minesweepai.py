@@ -18,20 +18,22 @@ class Cell:
         self.state = 'uncovered'
         self.mine = False
         self.nei = 0
-        self.neiSafe = None
-        self.neiHidden = None
-        self.neiMine = None
-        self.neiBoom = None
-        self.cellX= None
-        self.cellY= None
-        self.safety = True
+        #The Following is used as a KB for the agent, the agent only has the information if the cell is not uncovered
+        self.neiSafe = None #Number of safe neighbors
+        self.neiHidden = None #Number of Hidden Neighbors
+        self.neiMine = None #Number of Neighbors marked as a mine
+        self.neiBoom = None #Number of neighbors that went boom, but you're still alive because of keep going rule
 
+        self.cellX= None # UI Purposes
+        self.cellY= None # UI Purposes
+        self.safety = True #Whether or not Cell we have no info on is safe based on Projected CSP
 
+#Used to project changes based on CSP solution
 class Changes:
     def __init__(self,x,y):
         self.x = x
         self.y = y
-        self.change = None
+        self.change = None #The change, could be up, left, down, leftup, leftdown. rightup etc.
 
 
 #Generate a mine sweeper board, takes in d the dimension size, and n, the number of mines
@@ -307,7 +309,6 @@ def basicAI(board):
     return board
 
 
-
 #An improved agent to play minesweeper
 #Constraint Satisfaction Approach? 
 #Keep basic AI logic, add CSP logic, when no definitive solution, go random
@@ -333,14 +334,13 @@ def improvedAI(board):
             if kb[i][j].state == 'clear' and 8 - kb[i][j].nei - kb[i][j].neiSafe  == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
                 confirmation = True
                 board =  updateResult(board,i,j,'clear')
-    #Constraint Satisfaction Cases?
-    #hypothetical, rn, fill up mines based on clues randomly that satisfy constraints, then work in that direction
- 
+    #Constraint Satisfaction Cases
+    #If there are no guaranteed cases, start algorithm for CSP
     if confirmation == False:
         kb2 = deepcopy(board)
-        #print(generateSolutions(kb2))
+        #Call generate solutions, will return a boolean and the projected board based on CSP
         boole, kb2 = generateSolutions(kb2)
-        #No Optimal solution found, select a cell at random
+        #If the CSP does not give us any optimal projected solutions, then we will just choose a cell and random
         if boole == False:
             #print('no Opt')
           #Choose Cell at Random
@@ -357,43 +357,30 @@ def improvedAI(board):
                         counter = counter + 1
                         if counter == rand:
                             board[i][j].state = 'clear'
+        #If the CSP gives us an optimal projected solution, we will choose a cell that's safe for sure based on the solution
         elif boole == True:
             # Choose Cell thats safe in CSF solution
             counter = 0
             iList = []
             jList = []
+            #Get the i j coordinates of safe cells that are next to an uncovered or mined cell
             for i in range(len(kb2)):
                 for j in range(len(kb2[i])):
                     checkNeiSafe(kb2,i,j)
                     checkNeiMine(kb2,i,j)
-                    if kb2[i][j].state == 'uncovered' and kb2[i][j].neiSafe + kb2[i][j].neiMine > 1 and kb2[i][j].safety == True:
+                    if kb2[i][j].state == 'uncovered' and kb2[i][j].neiSafe + kb2[i][j].neiMine >= 1 and kb2[i][j].safety == True:
                         counter = counter + 1
                         iList.append(i)
                         jList.append(j)
-            if counter == 0:
-                # go random?
-                counter = 0
-                for i in range(len(kb)):
-                    for j in range(len(kb[i])):
-                        if kb[i][j].state == 'uncovered':
-                            counter = counter + 1
-                rand = random.randint(1,counter)
-                counter = 0
-                for i in range(len(kb)):
-                    for j in range(len(kb[i])):
-                        if kb[i][j].state == 'uncovered':
-                            counter = counter + 1
-                            if counter == rand:
-                                board[i][j].state = 'clear'
-            else:
-                rand = random.randint(1,counter)
-                counter = 0
-                for i in range(len(iList)):
-                    for j in range(len(jList)):
-                        counter = counter + 1
-                        if counter == rand:
-                            board[iList[i]][jList[j]].state = 'clear'
 
+            #Choose one of the cells that are safe among them
+            rand = random.randint(1,counter)
+            counter = 0
+            for i in range(len(iList)):
+                for j in range(len(jList)):
+                    counter = counter + 1
+                    if counter == rand:
+                        board[iList[i]][jList[j]].state = 'clear'
     return board
 
 #Based on Cell information, generate solutions
@@ -413,8 +400,10 @@ def generateSolutions(board):
                 if mineCount < kb[i][j].nei:
                     diff = kb[i][j].nei - mineCount
                     validOptions.append(generateValidChildren(kb,i,j,diff))
- 
     numb = len(validOptions)
+    #For the list of valid options in our optimal solution we will check and run them all and see if they break constraints
+    #If we find one that does not break constraints, we will return the board with the safety of the projected mines marked as false
+    #If we cannot find any, we return false and the board
     for c in range(numb):
         kb = deepcopy(board)
         kb2 = deepcopy(board)
@@ -426,9 +415,7 @@ def generateSolutions(board):
             return True, kb2
     return False, board
 
-
-
-#Apply changes of changes found that hopefully will not break constraint
+#Apply change the safety property of the cell of projected mines to prepare to return in the case that it does not break constraint
 def applySafety(board, x):
     if x.change == 'left':
         board[x.x-1][x.y].safety = False
@@ -448,7 +435,7 @@ def applySafety(board, x):
         board[x.x+1][x.y+1].safety = False
     return board
 
-#Apply changes of changes found that hopefully will not break constraint
+#Apply changes of to board of projected miens, hopefully will not break constraint
 def applyChanges(board, x):
     if x.change == 'left':
         board[x.x-1][x.y].state = 'mined'
@@ -469,10 +456,10 @@ def applyChanges(board, x):
     return board
 
 #Generates the children of possible positions of where a mine might be based on situation
-
 def generateValidChildren(board,x,y,diff):
     children = Changes(x,y)
     tmp = deepcopy(board)
+    #If the difference of the mine clue and actual revealed mines/boom is one, follow. walks through the possible projected spaces of the mine placement
     if diff == 1:
         validChil = []
         if x != 0:
@@ -522,6 +509,8 @@ def generateValidChildren(board,x,y,diff):
             if checkConstraint(tmp) == True and tmp[x+1][y+1].state == 'uncovered':
                 children.change = 'upright'
                 validChil.append(children)
+    #If it's greater than 1, then we will generate permulations of the possible projected mine placements
+    #before adding them to the list of valid children
     else:
         validChil = []
         tmp = deepcopy(board)
@@ -613,7 +602,7 @@ def countMined(board):
 def getData(x):
     sum = 0
     for i in range(x):
-        tmp = generateBoard(9,10)
+        tmp = generateBoard(5,10)
         while checkAllClear(tmp) == False:
             tmp = basicAI(tmp)
         print(countMined(tmp))
@@ -624,7 +613,7 @@ def getData(x):
 def getDataImp(x):
     sum = 0
     for i in range(x):
-        tmp = generateBoard(9,10)
+        tmp = generateBoard(5,10)
         while checkAllClear(tmp) == False:
             tmp = improvedAI(tmp)
         print(countMined(tmp))
