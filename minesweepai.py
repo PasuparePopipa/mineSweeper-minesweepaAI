@@ -2,6 +2,7 @@ import random
 import math
 import numpy
 from copy import copy, deepcopy
+from itertools import combinations
 
 #Cell properties
 #state can be uncovered, mined, or clear
@@ -23,7 +24,7 @@ class Cell:
         self.neiBoom = None
         self.cellX= None
         self.cellY= None
-        self.safety = False
+        self.safety = True
 
 
 class Changes:
@@ -341,6 +342,7 @@ def improvedAI(board):
         boole, kb2 = generateSolutions(kb2)
         #No Optimal solution found, select a cell at random
         if boole == False:
+            #print('no Opt')
           #Choose Cell at Random
             counter = 0
             for i in range(len(kb)):
@@ -357,21 +359,40 @@ def improvedAI(board):
                             board[i][j].state = 'clear'
         elif boole == True:
             # Choose Cell thats safe in CSF solution
-            #CURRENTLY CHOOSES A CELL RANDOMLY IN THE CSF SOLUTION
-            #WE SHOULD MAKE IT CHOOSE A CELL AS CLOSE TO A CLUE AS POSSIBLE
             counter = 0
+            iList = []
+            jList = []
             for i in range(len(kb2)):
                 for j in range(len(kb2[i])):
-                    if kb[i][j].state == 'uncovered':
+                    checkNeiSafe(kb2,i,j)
+                    checkNeiMine(kb2,i,j)
+                    if kb2[i][j].state == 'uncovered' and kb2[i][j].neiSafe + kb2[i][j].neiMine > 1 and kb2[i][j].safety == True:
                         counter = counter + 1
-            rand = random.randint(1,counter)
-            counter = 0
-            for i in range(len(kb2)):
-                for j in range(len(kb2[i])):
-                    if kb2[i][j].state == 'uncovered':
+                        iList.append(i)
+                        jList.append(j)
+            if counter == 0:
+                # go random?
+                counter = 0
+                for i in range(len(kb)):
+                    for j in range(len(kb[i])):
+                        if kb[i][j].state == 'uncovered':
+                            counter = counter + 1
+                rand = random.randint(1,counter)
+                counter = 0
+                for i in range(len(kb)):
+                    for j in range(len(kb[i])):
+                        if kb[i][j].state == 'uncovered':
+                            counter = counter + 1
+                            if counter == rand:
+                                board[i][j].state = 'clear'
+            else:
+                rand = random.randint(1,counter)
+                counter = 0
+                for i in range(len(iList)):
+                    for j in range(len(jList)):
                         counter = counter + 1
                         if counter == rand:
-                            board[i][j].state = 'clear'
+                            board[iList[i]][jList[j]].state = 'clear'
 
     return board
 
@@ -390,18 +411,42 @@ def generateSolutions(board):
                 checkNeiMine(kb,i,j)
                 mineCount = kb[i][j].neiBoom + kb[i][j].neiMine
                 if mineCount < kb[i][j].nei:
-                    validOptions.append(generateValidChildren(kb,i,j))
+                    diff = kb[i][j].nei - mineCount
+                    validOptions.append(generateValidChildren(kb,i,j,diff))
  
     numb = len(validOptions)
     for c in range(numb):
         kb = deepcopy(board)
+        kb2 = deepcopy(board)
         numb2 = len(validOptions[c])
         for d in range(numb2):
             kb = applyChanges(kb,validOptions[c][d])
+            kb2 = applySafety(kb2,validOptions[c][d])
         if checkConstraint(kb) == True:
-            return True, kb
-    return False, kb
+            return True, kb2
+    return False, board
 
+
+
+#Apply changes of changes found that hopefully will not break constraint
+def applySafety(board, x):
+    if x.change == 'left':
+        board[x.x-1][x.y].safety = False
+    elif x.change == 'down':
+        board[x.x][x.y-1].safety = False
+    elif x.change == 'up':
+        board[x.x][x.y+1].safety = False
+    elif x.change == 'right':
+        board[x.x+1][x.y].safety = False
+    elif x.change == 'leftup':
+        board[x.x-1][x.y+1].safety = False
+    elif x.change == 'rightdown':
+        board[x.x+1][x.y-1].safety = False
+    elif x.change == 'leftdown':
+        board[x.x-1][x.y-1].safety = False
+    elif x.change == 'upright':
+        board[x.x+1][x.y+1].safety = False
+    return board
 
 #Apply changes of changes found that hopefully will not break constraint
 def applyChanges(board, x):
@@ -424,60 +469,115 @@ def applyChanges(board, x):
     return board
 
 #Generates the children of possible positions of where a mine might be based on situation
-#CURRENTLY ONLY THINKS ABOUT A DIFFERENCE OF ONE MINE ONLY
-#NEED TO SOMEHOW ACCOUNT FOR MULTIPLE MINES, CURRENTLY CALLED WHEN CLUE > NUMBER OF REVEALED MINES,
-#CURRENTLY ONLY WORKS IDEALLY WHEN THAT DIFFERENCE IS 1
-def generateValidChildren(board,x,y):
+
+def generateValidChildren(board,x,y,diff):
     children = Changes(x,y)
     tmp = deepcopy(board)
-    validChil = []
-    if x != 0:
-        tmp[x-1][y].mine = True
-        if checkConstraint(tmp) == True and tmp[x-1][y].state == 'uncovered':
-            children.change = 'left'
-            validChil.append(children)
-    tmp = deepcopy(board)
-    if y != 0:
-        tmp[x][y-1].mine = True
-        if checkConstraint(tmp) == True and tmp[x][y-1].state == 'uncovered' :
-            children.change = 'down'
-            validChil.append(children)
-    tmp = deepcopy(board)
-    if y < len(tmp)-1:
-        tmp[x][y+1].mine = True
-        if checkConstraint(tmp) == True and tmp[x][y+1].state == 'uncovered':
-            children.change = 'up'
-            validChil.append(children)
-    tmp = deepcopy(board)
-    if x < len(tmp)-1:
-        tmp[x+1][y].mine = True
-        if checkConstraint(tmp) == True and tmp[x+1][y].state == 'uncovered':
-            children.change = 'right'
-            validChil.append(children)
-    tmp = deepcopy(board)
-    if x != 0 and y < len(tmp)-1:
-        tmp[x-1][y+1].mine = True
-        if checkConstraint(tmp) == True and tmp[x-1][y+1].state == 'uncovered':
-            children.change = 'leftup'
-            validChil.append(children)
-    tmp = deepcopy(board)
-    if x < len(board) - 1 and y != 0:
-        tmp[x+1][y-1].mine = True
-        if checkConstraint(tmp) == True and tmp[x+1][y-1].state == 'uncovered':
-            children.change = 'rightdown'
-            validChil.append(children)
-    tmp = deepcopy(board)
-    if x != 0 and y != 0:
-        tmp[x-1][y-1].mine = True 
-        if checkConstraint(tmp) == True and tmp[x-1][y-1].state == 'uncovered':
-            children.change = 'leftdown'
-            validChil.append(children)
-    tmp = deepcopy(board)
-    if x < len(tmp)-1 and y < len(tmp)-1:
-        tmp[x+1][y+1].mine = True
-        if checkConstraint(tmp) == True and tmp[x+1][y+1].state == 'uncovered':
-            children.change = 'upright'
-            validChil.append(children)
+    if diff == 1:
+        validChil = []
+        if x != 0:
+            tmp[x-1][y].mine = True
+            if checkConstraint(tmp) == True and tmp[x-1][y].state == 'uncovered':
+                children.change = 'left'
+                validChil.append(children)
+        tmp = deepcopy(board)
+        if y != 0:
+            tmp[x][y-1].mine = True
+            if checkConstraint(tmp) == True and tmp[x][y-1].state == 'uncovered' :
+                children.change = 'down'
+                validChil.append(children)
+        tmp = deepcopy(board)
+        if y < len(tmp)-1:
+            tmp[x][y+1].mine = True
+            if checkConstraint(tmp) == True and tmp[x][y+1].state == 'uncovered':
+                children.change = 'up'
+                validChil.append(children)
+        tmp = deepcopy(board)
+        if x < len(tmp)-1:
+            tmp[x+1][y].mine = True
+            if checkConstraint(tmp) == True and tmp[x+1][y].state == 'uncovered':
+                children.change = 'right'
+                validChil.append(children)
+        tmp = deepcopy(board)
+        if x != 0 and y < len(tmp)-1:
+            tmp[x-1][y+1].mine = True
+            if checkConstraint(tmp) == True and tmp[x-1][y+1].state == 'uncovered':
+                children.change = 'leftup'
+                validChil.append(children)
+        tmp = deepcopy(board)
+        if x < len(board) - 1 and y != 0:
+            tmp[x+1][y-1].mine = True
+            if checkConstraint(tmp) == True and tmp[x+1][y-1].state == 'uncovered':
+                children.change = 'rightdown'
+                validChil.append(children)
+        tmp = deepcopy(board)
+        if x != 0 and y != 0:
+            tmp[x-1][y-1].mine = True 
+            if checkConstraint(tmp) == True and tmp[x-1][y-1].state == 'uncovered':
+                children.change = 'leftdown'
+                validChil.append(children)
+        tmp = deepcopy(board)
+        if x < len(tmp)-1 and y < len(tmp)-1:
+            tmp[x+1][y+1].mine = True
+            if checkConstraint(tmp) == True and tmp[x+1][y+1].state == 'uncovered':
+                children.change = 'upright'
+                validChil.append(children)
+    else:
+        validChil = []
+        tmp = deepcopy(board)
+        #Generate all Neighbors
+        neiboor = []
+        if x != 0:
+            neiboor.append('left')
+        if y != 0:
+            neiboor.append('down')
+        if y < len(tmp)-1:
+            neiboor.append('up')
+        if x < len(tmp)-1:
+            neiboor.append('right')
+        if x != 0 and y < len(tmp)-1:
+            neiboor.append('leftup')
+        if x < len(board) - 1 and y != 0:
+            neiboor.append('rightdown')
+        if x != 0 and y != 0:
+            neiboor.append('leftdown')
+        if x < len(tmp)-1 and y < len(tmp)-1:
+            neiboor.append('upright')
+        #Generate Permutations of Neighbors
+        for perm in combinations(neiboor,diff):
+            tmp = deepcopy(board)
+            for chan in perm:
+                if chan == 'left':
+                    if tmp[x-1][y].state == 'uncovered':
+                        tmp[x-1][y].mine = True
+                elif chan == 'down':
+                    if tmp[x][y-1].state == 'uncovered':
+                        tmp[x][y-1].mine = True
+                elif chan == 'up':
+                    if tmp[x][y+1].state == 'uncovered':
+                        tmp[x][y+1].mine = True
+                elif chan == 'right':
+                    if tmp[x+1][y].state == 'uncovered':
+                        tmp[x+1][y].mine = True
+                elif chan == 'leftup':
+                    if tmp[x-1][y+1].state == 'uncovered':
+                        tmp[x-1][y+1].mine = True
+                elif chan == 'rightdown':
+                    if tmp[x+1][y-1].state == 'uncovered':
+                        tmp[x+1][y-1].mine = True
+                elif chan == 'leftdown':
+                    if tmp[x-1][y-1].state == 'uncovered':
+                        tmp[x-1][y-1].mine = True
+                elif chan == 'upright':
+                    if tmp[x+1][y+1].state == 'uncovered':
+                        tmp[x+1][y+1].mine = True
+            #Add that permutation of changes to moves
+            if checkConstraint(tmp) == True:
+                for chan in perm:
+                    children.change = chan
+                    validChil.append(children)
+                break
+        #for c in range(diff):
     return validChil
 
 
@@ -513,7 +613,7 @@ def countMined(board):
 def getData(x):
     sum = 0
     for i in range(x):
-        tmp = generateBoard(10,8)
+        tmp = generateBoard(9,10)
         while checkAllClear(tmp) == False:
             tmp = basicAI(tmp)
         print(countMined(tmp))
@@ -524,7 +624,7 @@ def getData(x):
 def getDataImp(x):
     sum = 0
     for i in range(x):
-        tmp = generateBoard(10,8)
+        tmp = generateBoard(9,10)
         while checkAllClear(tmp) == False:
             tmp = improvedAI(tmp)
         print(countMined(tmp))
@@ -534,6 +634,6 @@ def getDataImp(x):
 
 
 
-getData(50)
-#getDataImp(50)
+#getData(50)
+getDataImp(50)
 
