@@ -11,6 +11,8 @@ from itertools import combinations
 #nei represents actual number of Neighbor mines, defaults to 0
 #neiSafe, neiHidden, and neiMine are the Knowledge Base conclusions of the agent(number of safe/hidden/mine confirmations) around the specific cell
 #cellX, cellY is used for UI purposes
+
+# UNCOVERED IS COVERED (HIDDEN CELLS)
 class Cell:
     def __init__(self,x,y):
         self.x = x
@@ -624,5 +626,5 @@ def getDataImp(x):
 
 
 #getData(50)
-getDataImp(50)
+#getDataImp(50)
 
