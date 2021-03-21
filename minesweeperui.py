@@ -26,10 +26,9 @@ screen = pygame.display.set_mode(scale,RESIZABLE)
 pygame.display.set_caption('MineSweeper!')
 
 #Set dimensions for the board and create board 
-dimen = 8
-mineNumb = 10
+dimen = 10
+mineNumb = 20
 tmpboard = minesweepai.generateBoard(dimen,mineNumb)
-
 
 def gamestart():
     #Initialize Stuff

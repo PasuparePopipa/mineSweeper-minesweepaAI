@@ -5,22 +5,21 @@ from copy import copy, deepcopy
 from itertools import combinations
 
 #Cell properties
-#state can be uncovered, mined, or clear
+#state can be covered, mined, or clear
 #mine property is whether or not the cell has a mine
 #Note, X is vertical, Y is horizontal
 #nei represents actual number of Neighbor mines, defaults to 0
 #neiSafe, neiHidden, and neiMine are the Knowledge Base conclusions of the agent(number of safe/hidden/mine confirmations) around the specific cell
 #cellX, cellY is used for UI purposes
 
-# UNCOVERED IS COVERED (HIDDEN CELLS)
 class Cell:
     def __init__(self,x,y):
         self.x = x
         self.y = y
-        self.state = 'uncovered'
+        self.state = 'covered'
         self.mine = False
         self.nei = 0
-        #The Following is used as a KB for the agent, the agent only has the information if the cell is not uncovered
+        #The Following is used as a KB for the agent, the agent only has the information if the cell is not covered
         self.neiSafe = None #Number of safe neighbors
         self.neiHidden = None #Number of Hidden Neighbors
         self.neiMine = None #Number of Neighbors marked as a mine
@@ -81,7 +80,7 @@ def printBoard(board,n):
         print(row)
 
 #Changes Cell state, takes in a cell and the state you want to change
-#s is string of state, uncovered, cleared, mined
+#s is string of state, covered, cleared, mined
 def changeState(x,s):
     x.state = s
 
@@ -182,28 +181,28 @@ def checkNeiSafe(board,x,y):
 def checkNeiHidden(board,x,y):
     counter = 0
     if x != 0:
-        if board[x-1][y].state == 'uncovered':
+        if board[x-1][y].state == 'covered':
             counter = counter + 1
     if y != 0:
-        if board[x][y-1].state == 'uncovered':
+        if board[x][y-1].state == 'covered':
             counter = counter + 1
     if y < len(board)-1:
-        if board[x][y+1].state == 'uncovered':
+        if board[x][y+1].state == 'covered':
             counter = counter + 1
     if x < len(board)-1:
-        if board[x+1][y].state == 'uncovered':
+        if board[x+1][y].state == 'covered':
             counter = counter + 1
     if x != 0 and y < len(board)-1:
-        if board[x-1][y+1].state == 'uncovered':
+        if board[x-1][y+1].state == 'covered':
             counter = counter + 1
     if x < len(board) - 1 and y != 0:
-        if board[x+1][y-1].state == 'uncovered':
+        if board[x+1][y-1].state == 'covered':
             counter = counter + 1
     if x != 0 and y != 0:
-        if board[x-1][y-1].state == 'uncovered':
+        if board[x-1][y-1].state == 'covered':
             counter = counter + 1
     if x < len(board)-1 and y < len(board)-1:
-        if board[x+1][y+1].state == 'uncovered':
+        if board[x+1][y+1].state == 'covered':
             counter = counter + 1
     board[x][y].neiHidden = counter
 
@@ -242,21 +241,21 @@ def checkNeiBoom(board,x,y):
 #Upon drawing a solid conclusion(basic agent), takes in the board, the coordinates x and y, and a state to change the surrounding cells (z)
 #all surrounding cells state will be changed to that, returns the new board
 def updateResult(board,x,y,z):
-    if x != 0 and board[x-1][y].state == 'uncovered':
+    if x != 0 and board[x-1][y].state == 'covered':
         board[x-1][y].state = z
-    if y != 0 and board[x][y-1].state == 'uncovered':
+    if y != 0 and board[x][y-1].state == 'covered':
         board[x][y-1].state = z
-    if y < len(board)-1 and board[x][y+1].state == 'uncovered':
+    if y < len(board)-1 and board[x][y+1].state == 'covered':
         board[x][y+1].state = z
-    if x < len(board)-1 and board[x+1][y].state == 'uncovered':
+    if x < len(board)-1 and board[x+1][y].state == 'covered':
         board[x+1][y].state = z
-    if x != 0 and y < len(board)-1 and board[x-1][y+1].state == 'uncovered':
+    if x != 0 and y < len(board)-1 and board[x-1][y+1].state == 'covered':
         board[x-1][y+1].state = z
-    if x < len(board) - 1 and y != 0 and board[x+1][y-1].state == 'uncovered':
+    if x < len(board) - 1 and y != 0 and board[x+1][y-1].state == 'covered':
         board[x+1][y-1].state = z
-    if x != 0 and y != 0 and board[x-1][y-1].state == 'uncovered':
+    if x != 0 and y != 0 and board[x-1][y-1].state == 'covered':
         board[x-1][y-1].state = z
-    if x < len(board)-1 and y < len(board)-1 and board[x+1][y+1].state == 'uncovered' :
+    if x < len(board)-1 and y < len(board)-1 and board[x+1][y+1].state == 'covered' :
         board[x+1][y+1].state = z
     return board
 
@@ -298,13 +297,13 @@ def basicAI(board):
         counter = 0
         for i in range(len(kb)):
             for j in range(len(kb[i])):
-                if kb[i][j].state == 'uncovered':
+                if kb[i][j].state == 'covered':
                     counter = counter + 1
         rand = random.randint(1,counter)
         counter = 0
         for i in range(len(kb)):
             for j in range(len(kb[i])):
-                if kb[i][j].state == 'uncovered':
+                if kb[i][j].state == 'covered':
                     counter = counter + 1
                     if counter == rand:
                         board[i][j].state = 'clear'
@@ -321,21 +320,23 @@ def improvedAI(board):
     #If mine neighbors = hidden neighbors, all hidden neighbors are mines
     for i in range(len(kb)):
         for j in range(len(kb[i])):
-            checkNeiMine(kb,i,j)
-            checkNeiHidden(kb,i,j)
-            checkNeiBoom(kb,i,j)
-            if kb[i][j].state == 'clear' and kb[i][j].nei - kb[i][j].neiMine - kb[i][j].neiBoom == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
-                confirmation = True
-                board = updateResult(board,i,j,'mined')
+            if kb[i][j].state == 'clear': 
+                checkNeiMine(kb,i,j)
+                checkNeiHidden(kb,i,j)
+                checkNeiBoom(kb,i,j)
+                if kb[i][j].nei - kb[i][j].neiMine - kb[i][j].neiBoom == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
+                    confirmation = True
+                    board = updateResult(board,i,j,'mined')
     #If 8-Clue minus number of safe neighbors is hidden neighbors, all neighbors are safe
     for i in range(len(kb)):
         for j in range(len(kb[i])):
-            checkMine(kb,i,j)
-            checkNeiSafe(kb,i,j)
-            checkNeiHidden(kb,i,j)
-            if kb[i][j].state == 'clear' and 8 - kb[i][j].nei - kb[i][j].neiSafe  == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
-                confirmation = True
-                board =  updateResult(board,i,j,'clear')
+            if kb[i][j].state == 'clear':
+                checkMine(kb,i,j)
+                checkNeiSafe(kb,i,j)
+                checkNeiHidden(kb,i,j)
+                if 8 - kb[i][j].nei - kb[i][j].neiSafe  == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
+                    confirmation = True
+                    board =  updateResult(board,i,j,'clear')
     #Constraint Satisfaction Cases
     #If there are no guaranteed cases, start algorithm for CSP
     if confirmation == False:
@@ -349,13 +350,13 @@ def improvedAI(board):
             counter = 0
             for i in range(len(kb)):
                 for j in range(len(kb[i])):
-                    if kb[i][j].state == 'uncovered':
+                    if kb[i][j].state == 'covered':
                         counter = counter + 1
             rand = random.randint(1,counter)
             counter = 0
             for i in range(len(kb)):
                 for j in range(len(kb[i])):
-                    if kb[i][j].state == 'uncovered':
+                    if kb[i][j].state == 'covered':
                         counter = counter + 1
                         if counter == rand:
                             board[i][j].state = 'clear'
@@ -365,24 +366,26 @@ def improvedAI(board):
             counter = 0
             iList = []
             jList = []
-            #Get the i j coordinates of safe cells that are next to an uncovered or mined cell
+            #Get the i j coordinates of safe cells that are next to an covered or mined cell
             for i in range(len(kb2)):
                 for j in range(len(kb2[i])):
-                    checkNeiSafe(kb2,i,j)
-                    checkNeiMine(kb2,i,j)
-                    if kb2[i][j].state == 'uncovered' and kb2[i][j].neiSafe + kb2[i][j].neiMine >= 1 and kb2[i][j].safety == True:
-                        counter = counter + 1
-                        iList.append(i)
-                        jList.append(j)
+                    if kb2[i][j].state == 'covered':
+                        checkNeiSafe(kb2,i,j)
+                        checkNeiMine(kb2,i,j)
+                        if kb2[i][j].neiSafe + kb2[i][j].neiMine >= 1 and kb2[i][j].safety == True:
+                            counter = counter + 1
+                            iList.append(i)
+                            jList.append(j)
 
             #Choose one of the cells that are safe among them
             rand = random.randint(1,counter)
-            counter = 0
-            for i in range(len(iList)):
-                for j in range(len(jList)):
-                    counter = counter + 1
-                    if counter == rand:
-                        board[iList[i]][jList[j]].state = 'clear'
+            counter2 = 0
+
+            for num in range(counter):
+                counter2 = counter2 + 1
+                if counter2 == rand:
+                    board[iList[num]][jList[num]].state = 'clear'
+
     return board
 
 #Based on Cell information, generate solutions
@@ -466,49 +469,49 @@ def generateValidChildren(board,x,y,diff):
         validChil = []
         if x != 0:
             tmp[x-1][y].mine = True
-            if checkConstraint(tmp) == True and tmp[x-1][y].state == 'uncovered':
+            if checkConstraint(tmp) == True and tmp[x-1][y].state == 'covered':
                 children.change = 'left'
                 validChil.append(children)
         tmp = deepcopy(board)
         if y != 0:
             tmp[x][y-1].mine = True
-            if checkConstraint(tmp) == True and tmp[x][y-1].state == 'uncovered' :
+            if checkConstraint(tmp) == True and tmp[x][y-1].state == 'covered' :
                 children.change = 'down'
                 validChil.append(children)
         tmp = deepcopy(board)
         if y < len(tmp)-1:
             tmp[x][y+1].mine = True
-            if checkConstraint(tmp) == True and tmp[x][y+1].state == 'uncovered':
+            if checkConstraint(tmp) == True and tmp[x][y+1].state == 'covered':
                 children.change = 'up'
                 validChil.append(children)
         tmp = deepcopy(board)
         if x < len(tmp)-1:
             tmp[x+1][y].mine = True
-            if checkConstraint(tmp) == True and tmp[x+1][y].state == 'uncovered':
+            if checkConstraint(tmp) == True and tmp[x+1][y].state == 'covered':
                 children.change = 'right'
                 validChil.append(children)
         tmp = deepcopy(board)
         if x != 0 and y < len(tmp)-1:
             tmp[x-1][y+1].mine = True
-            if checkConstraint(tmp) == True and tmp[x-1][y+1].state == 'uncovered':
+            if checkConstraint(tmp) == True and tmp[x-1][y+1].state == 'covered':
                 children.change = 'leftup'
                 validChil.append(children)
         tmp = deepcopy(board)
         if x < len(board) - 1 and y != 0:
             tmp[x+1][y-1].mine = True
-            if checkConstraint(tmp) == True and tmp[x+1][y-1].state == 'uncovered':
+            if checkConstraint(tmp) == True and tmp[x+1][y-1].state == 'covered':
                 children.change = 'rightdown'
                 validChil.append(children)
         tmp = deepcopy(board)
         if x != 0 and y != 0:
             tmp[x-1][y-1].mine = True 
-            if checkConstraint(tmp) == True and tmp[x-1][y-1].state == 'uncovered':
+            if checkConstraint(tmp) == True and tmp[x-1][y-1].state == 'covered':
                 children.change = 'leftdown'
                 validChil.append(children)
         tmp = deepcopy(board)
         if x < len(tmp)-1 and y < len(tmp)-1:
             tmp[x+1][y+1].mine = True
-            if checkConstraint(tmp) == True and tmp[x+1][y+1].state == 'uncovered':
+            if checkConstraint(tmp) == True and tmp[x+1][y+1].state == 'covered':
                 children.change = 'upright'
                 validChil.append(children)
     #If it's greater than 1, then we will generate permulations of the possible projected mine placements
@@ -539,28 +542,28 @@ def generateValidChildren(board,x,y,diff):
             tmp = deepcopy(board)
             for chan in perm:
                 if chan == 'left':
-                    if tmp[x-1][y].state == 'uncovered':
+                    if tmp[x-1][y].state == 'covered':
                         tmp[x-1][y].mine = True
                 elif chan == 'down':
-                    if tmp[x][y-1].state == 'uncovered':
+                    if tmp[x][y-1].state == 'covered':
                         tmp[x][y-1].mine = True
                 elif chan == 'up':
-                    if tmp[x][y+1].state == 'uncovered':
+                    if tmp[x][y+1].state == 'covered':
                         tmp[x][y+1].mine = True
                 elif chan == 'right':
-                    if tmp[x+1][y].state == 'uncovered':
+                    if tmp[x+1][y].state == 'covered':
                         tmp[x+1][y].mine = True
                 elif chan == 'leftup':
-                    if tmp[x-1][y+1].state == 'uncovered':
+                    if tmp[x-1][y+1].state == 'covered':
                         tmp[x-1][y+1].mine = True
                 elif chan == 'rightdown':
-                    if tmp[x+1][y-1].state == 'uncovered':
+                    if tmp[x+1][y-1].state == 'covered':
                         tmp[x+1][y-1].mine = True
                 elif chan == 'leftdown':
-                    if tmp[x-1][y-1].state == 'uncovered':
+                    if tmp[x-1][y-1].state == 'covered':
                         tmp[x-1][y-1].mine = True
                 elif chan == 'upright':
-                    if tmp[x+1][y+1].state == 'uncovered':
+                    if tmp[x+1][y+1].state == 'covered':
                         tmp[x+1][y+1].mine = True
             #Add that permutation of changes to moves
             if checkConstraint(tmp) == True:
@@ -583,11 +586,11 @@ def checkConstraint(board):
                 return False
     return True
 
-#checks if the game is over in that there are no more uncovered cells
+#checks if the game is over in that there are no more covered cells
 def checkAllClear(board):
     for i in range(len(board)):
         for j in range(len(board[i])):
-            if board[i][j].state == 'uncovered':
+            if board[i][j].state == 'covered':
                 return False
     return True
 #Counts the number of mined cells for final score
@@ -604,7 +607,7 @@ def countMined(board):
 def getData(x):
     sum = 0
     for i in range(x):
-        tmp = generateBoard(5,10)
+        tmp = generateBoard(10,90)
         while checkAllClear(tmp) == False:
             tmp = basicAI(tmp)
         print(countMined(tmp))
@@ -615,7 +618,7 @@ def getData(x):
 def getDataImp(x):
     sum = 0
     for i in range(x):
-        tmp = generateBoard(5,10)
+        tmp = generateBoard(10,90)
         while checkAllClear(tmp) == False:
             tmp = improvedAI(tmp)
         print(countMined(tmp))
@@ -625,6 +628,6 @@ def getDataImp(x):
 
 
 
-#getData(50)
-#getDataImp(50)
+#getData(300)
+#getDataImp(300)
 
