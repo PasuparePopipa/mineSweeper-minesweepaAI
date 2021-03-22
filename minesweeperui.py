@@ -27,7 +27,7 @@ pygame.display.set_caption('MineSweeper!')
 
 #Set dimensions for the board and create board 
 dimen = 10
-mineNumb = 20
+mineNumb = 90
 tmpboard = minesweepai.generateBoard(dimen,mineNumb)
 
 def gamestart():
@@ -58,7 +58,8 @@ def gamestart():
                     flagMine, rip = checkWin(tmpboard,dimen)
                 #Run Advanced AI
                 if 525 <= mouse[0] <= 525+140 and 170 <= mouse[1] <= 170+40:
-                    minesweepai.improvedAI(tmpboard)
+                    minesweepai.improvedAIGlobal(tmpboard,90)
+                    #minesweepai.improvedAI(tmpboard)
                     flagMine, rip = checkWin(tmpboard,dimen)
                     print('clicked')
 

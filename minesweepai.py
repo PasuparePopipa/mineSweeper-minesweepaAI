@@ -11,7 +11,6 @@ from itertools import combinations
 #nei represents actual number of Neighbor mines, defaults to 0
 #neiSafe, neiHidden, and neiMine are the Knowledge Base conclusions of the agent(number of safe/hidden/mine confirmations) around the specific cell
 #cellX, cellY is used for UI purposes
-
 class Cell:
     def __init__(self,x,y):
         self.x = x
@@ -50,7 +49,7 @@ def generateBoard(d,n):
     #total Cells
     totalCells = d*d
     #Generate mines
-    minePlacement = random.sample(range(1,totalCells),n)
+    minePlacement = random.sample(range(0,totalCells),n)
     #insert the mines based on mine placement
     counter = 0
     for i in range(len(board)):
@@ -259,7 +258,6 @@ def updateResult(board,x,y,z):
         board[x+1][y+1].state = z
     return board
 
-
 #Update the neighbor values of all Cells
 #Used when generating the board, takes in the board, updates so all cells will have the correct number of actual mines surrounding it
 def updateAllNei(board):
@@ -274,23 +272,25 @@ def basicAI(board):
     #If mine neighbors = hidden neighbors, all hidden neighbors are mines
     for i in range(len(kb)):
         for j in range(len(kb[i])):
-            checkNeiMine(kb,i,j)
-            checkNeiHidden(kb,i,j)
-            checkNeiBoom(kb,i,j)
-            if kb[i][j].state == 'clear' and kb[i][j].nei - kb[i][j].neiMine - kb[i][j].neiBoom == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
-                confirmation = True
-                #print('p1')
-                board = updateResult(board,i,j,'mined')
+            if kb[i][j].state == 'clear' and kb[i][j].mine == False:
+                checkNeiMine(kb,i,j)
+                checkNeiHidden(kb,i,j)
+                checkNeiBoom(kb,i,j)
+                if kb[i][j].nei - kb[i][j].neiMine - kb[i][j].neiBoom == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
+                    confirmation = True
+                    #print('p1')
+                    board = updateResult(board,i,j,'mined')
     #If 8-Clue minus number of safe neighbors is hidden neighbors, all neighbors are safe
     for i in range(len(kb)):
         for j in range(len(kb[i])):
-            checkMine(kb,i,j)
-            checkNeiSafe(kb,i,j)
-            checkNeiHidden(kb,i,j)
-            if kb[i][j].state == 'clear' and 8 - kb[i][j].nei - kb[i][j].neiSafe  == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
-                #print('p2')
-                confirmation = True
-                board =  updateResult(board,i,j,'clear')
+            if kb[i][j].state == 'clear' and kb[i][j].mine == False:
+                checkMine(kb,i,j)
+                checkNeiSafe(kb,i,j)
+                checkNeiHidden(kb,i,j)
+                if 8 - kb[i][j].nei - kb[i][j].neiSafe  == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
+                    #print('p2')
+                    confirmation = True
+                    board =  updateResult(board,i,j,'clear')
     #Choose a Cell at random to flip
     if confirmation == False:
         #print('p3')
@@ -309,7 +309,6 @@ def basicAI(board):
                         board[i][j].state = 'clear'
     return board
 
-
 #An improved agent to play minesweeper
 #Constraint Satisfaction Approach? 
 #Keep basic AI logic, add CSP logic, when no definitive solution, go random
@@ -320,7 +319,7 @@ def improvedAI(board):
     #If mine neighbors = hidden neighbors, all hidden neighbors are mines
     for i in range(len(kb)):
         for j in range(len(kb[i])):
-            if kb[i][j].state == 'clear': 
+            if kb[i][j].state == 'clear' and kb[i][j].mine == False: 
                 checkNeiMine(kb,i,j)
                 checkNeiHidden(kb,i,j)
                 checkNeiBoom(kb,i,j)
@@ -330,7 +329,7 @@ def improvedAI(board):
     #If 8-Clue minus number of safe neighbors is hidden neighbors, all neighbors are safe
     for i in range(len(kb)):
         for j in range(len(kb[i])):
-            if kb[i][j].state == 'clear':
+            if kb[i][j].state == 'clear' and kb[i][j].mine == False:
                 checkMine(kb,i,j)
                 checkNeiSafe(kb,i,j)
                 checkNeiHidden(kb,i,j)
@@ -387,6 +386,248 @@ def improvedAI(board):
                     board[iList[num]][jList[num]].state = 'clear'
 
     return board
+
+
+#An improved agent to play minesweeper but also has global information
+def improvedAIGlobal(board,mineCount):
+    confirmation = False
+    kb = deepcopy(board)
+    #Guarantee Cases of Basic Mines
+    #If mine neighbors = hidden neighbors, all hidden neighbors are mines
+    for i in range(len(kb)):
+        for j in range(len(kb[i])):
+            if kb[i][j].state == 'clear' and kb[i][j].mine == False: 
+                checkNeiMine(kb,i,j)
+                checkNeiHidden(kb,i,j)
+                checkNeiBoom(kb,i,j)
+                if kb[i][j].nei - kb[i][j].neiMine - kb[i][j].neiBoom == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
+                    confirmation = True
+                    board = updateResult(board,i,j,'mined')
+    #If 8-Clue minus number of safe neighbors is hidden neighbors, all neighbors are safe
+    for i in range(len(kb)):
+        for j in range(len(kb[i])):
+            if kb[i][j].state == 'clear' and kb[i][j].mine == False:
+                checkMine(kb,i,j)
+                checkNeiSafe(kb,i,j)
+                checkNeiHidden(kb,i,j)
+                if 8 - kb[i][j].nei - kb[i][j].neiSafe  == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
+                    confirmation = True
+                    board =  updateResult(board,i,j,'clear')
+    #Addition of Global Information Case here
+     #If covered cells + mined Cells = Global MineCount, end game, set remaining cells as 'mined'
+    mined = 0
+    covered = 0
+    boom = 0
+    for i in range(len(board)):
+        for j in range(len(board[i])):
+            if board[i][j].state == 'mined':
+                mined = mined+ 1
+            if board[i][j].state == 'covered':
+                covered = covered + 1
+            if board[i][j].state == 'clear' and board[i][j].mine == True:
+                boom = boom + 1
+    if mineCount == covered + mined + boom:
+        #print('Mine' + str(mined))
+        #print('Covered' + str(covered))
+        #print('Boom' + str(boom))
+        confirmation = True
+        for i in range(len(board)):
+            for j in range(len(board[i])):
+                if board[i][j].state == 'covered':  
+                    board[i][j].state = 'mined'
+    #Constraint Satisfaction Cases
+    #If there are no guaranteed cases, start algorithm for CSP
+    if confirmation == False:
+        kb2 = deepcopy(board)
+        #Call generate solutions, will return a boolean and the projected board based on CSP
+        boole, kb2 = generateSolutions(kb2)
+        #If the CSP does not give us any optimal projected solutions, then we will just choose a cell and random
+        if boole == False:
+          #Choose Cell at Random
+            counter = 0
+            for i in range(len(kb)):
+                for j in range(len(kb[i])):
+                    if kb[i][j].state == 'covered':
+                        counter = counter + 1
+            rand = random.randint(1,counter)
+            counter = 0
+            for i in range(len(kb)):
+                for j in range(len(kb[i])):
+                    if kb[i][j].state == 'covered':
+                        counter = counter + 1
+                        if counter == rand:
+                            board[i][j].state = 'clear'
+        #If the CSP gives us an optimal projected solution, we will choose a cell that's safe for sure based on the solution
+        elif boole == True:
+            # Choose Cell thats safe in CSF solution
+            counter = 0
+            iList = []
+            jList = []
+            #Get the i j coordinates of safe cells that are next to an covered or mined cell
+            for i in range(len(kb2)):
+                for j in range(len(kb2[i])):
+                    if kb2[i][j].state == 'covered':
+                        checkNeiSafe(kb2,i,j)
+                        checkNeiMine(kb2,i,j)
+                        if kb2[i][j].neiSafe + kb2[i][j].neiMine >= 1 and kb2[i][j].safety == True:
+                            counter = counter + 1
+                            iList.append(i)
+                            jList.append(j)
+            #Choose one of the cells that are safe among them
+            rand = random.randint(1,counter)
+            counter2 = 0
+            for num in range(counter):
+                counter2 = counter2 + 1
+                if counter2 == rand:
+                    board[iList[num]][jList[num]].state = 'clear'
+    return board
+
+
+#An improved agent to play minesweeper, but also takes into accoutn risky cells
+#Uses Simulated Annealing to maybe get around it
+def improvedAIBetter(board):
+    confirmation = False
+    kb = deepcopy(board)
+    #Guarantee Cases of Basic Mines
+    #If mine neighbors = hidden neighbors, all hidden neighbors are mines
+    for i in range(len(kb)):
+        for j in range(len(kb[i])):
+            if kb[i][j].state == 'clear' and kb[i][j].mine == False: 
+                checkNeiMine(kb,i,j)
+                checkNeiHidden(kb,i,j)
+                checkNeiBoom(kb,i,j)
+                if kb[i][j].nei - kb[i][j].neiMine - kb[i][j].neiBoom == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
+                    confirmation = True
+                    board = updateResult(board,i,j,'mined')
+    #If 8-Clue minus number of safe neighbors is hidden neighbors, all neighbors are safe
+    for i in range(len(kb)):
+        for j in range(len(kb[i])):
+            if kb[i][j].state == 'clear' and kb[i][j].mine == False:
+                checkMine(kb,i,j)
+                checkNeiSafe(kb,i,j)
+                checkNeiHidden(kb,i,j)
+                if 8 - kb[i][j].nei - kb[i][j].neiSafe  == kb[i][j].neiHidden and kb[i][j].neiHidden != 0:
+                    confirmation = True
+                    board =  updateResult(board,i,j,'clear')
+    #Constraint Satisfaction Cases
+    #If there are no guaranteed cases, start algorithm for CSP
+    if confirmation == False:
+        kb2 = deepcopy(board)
+        #Call generate solutions, will return a boolean and the projected board based on CSP
+        boole, kb2 = generateSolutions(kb2)
+        #If the CSP does not give us any optimal projected solutions, then we will just choose a cell and random
+        if boole == False:
+            #print('no Opt')
+          #Choose Cell at Random
+            counter = 0
+            for i in range(len(kb)):
+                for j in range(len(kb[i])):
+                    if kb[i][j].state == 'covered':
+                        counter = counter + 1
+            rand = random.randint(1,counter)
+            counter = 0
+            for i in range(len(kb)):
+                for j in range(len(kb[i])):
+                    if kb[i][j].state == 'covered':
+                        counter = counter + 1
+                        if counter == rand:
+                            board[i][j].state = 'clear'
+        #If the CSP gives us an optimal projected solution, we will choose a cell that's safe for sure based on the solution
+        elif boole == True:
+            # Choose Cell thats safe in CSF solution
+            counter = 0
+            iList = []
+            jList = []
+            #Get the i j coordinates of safe cells that are next to an covered or mined cell
+            for i in range(len(kb2)):
+                for j in range(len(kb2[i])):
+                    if kb2[i][j].state == 'covered':
+                        checkNeiSafe(kb2,i,j)
+                        checkNeiMine(kb2,i,j)
+                        if kb2[i][j].neiSafe + kb2[i][j].neiMine >= 1 and kb2[i][j].safety == True:
+                            #Filter out for Improved Case
+                            #if checkCase(kb2,i,j) == False:
+                                counter = counter + 1
+                                iList.append(i)
+                                jList.append(j)
+            #Choose one of the cells that are safe among them
+            rand = random.randint(1,counter)
+            counter2 = 0
+            for num in range(counter):
+                counter2 = counter2 + 1
+                if counter2 == rand:
+                    #Check if this optimal solution safe deemed cell is risky
+                    if checkCase(kb2,i,j) == True:
+                        #Simulated Annealing Aspect
+                        rand2 = random.randint(1,100)
+                        if rand2 > 20:
+                            board[iList[num]][jList[num]].state = 'clear'
+                    else:
+                        board[iList[num]][jList[num]].state = 'clear'
+
+    return board
+
+#Filter Mine if choosing it, is risky based on neighboring clues
+def checkCase(board,x,y):
+    kb = deepcopy(board)
+    if x != 0:
+        if board[x-1][y].state == 'clear' and board[x-1][y].mine == False and board[x-1][y].nei > 4:
+            checkNeiHidden(kb,x-1,y)
+            checkNeiBoom(kb,x-1,y)
+            checkNeiMine(kb,x-1,y)
+            if kb[x-1][y].neiHidden - (kb[x-1][y].nei - (kb[x-1][y].neiBoom + kb[x-1][y].neiMine)) < 2:
+                return True
+    if y != 0:
+        if board[x][y-1].state == 'clear' and board[x][y-1].mine == False and board[x][y-1].nei > 4:
+            checkNeiHidden(kb,x,y-1)
+            checkNeiBoom(kb,x,y-1)
+            checkNeiMine(kb,x,y-1)
+            if kb[x][y-1].neiHidden - (kb[x][y-1].nei - (kb[x][y-1].neiBoom + kb[x][y-1].neiMine)) < 2:
+                return True
+    if y < len(board)-1:
+        if board[x][y+1].state == 'clear' and board[x][y+1].mine == False and board[x][y+1].nei > 4:
+            checkNeiHidden(kb,x,y+1)
+            checkNeiBoom(kb,x,y+1)
+            checkNeiMine(kb,x,y+1)
+            if kb[x][y+1].neiHidden - (kb[x][y+1].nei - (kb[x][y+1].neiBoom + kb[x][y+1].neiMine)) < 2:
+                return True
+    if x < len(board)-1:
+        if board[x+1][y].state == 'clear' and board[x+1][y].mine == False and board[x+1][y].nei > 4:
+            checkNeiHidden(kb,x+1,y)
+            checkNeiBoom(kb,x+1,y)
+            checkNeiMine(kb,x+1,y)
+            if kb[x+1][y].neiHidden - (kb[x+1][y].nei - (kb[x+1][y].neiBoom + kb[x+1][y].neiMine)) < 2:
+                return True
+    if x != 0 and y < len(board)-1:
+        if board[x-1][y+1].state == 'clear' and board[x-1][y+1].mine == False and board[x-1][y+1].nei > 4:
+            checkNeiHidden(kb,x-1,y+1)
+            checkNeiBoom(kb,x-1,y+1)
+            checkNeiMine(kb,x-1,y+1)
+            if kb[x-1][y+1].neiHidden - (kb[x-1][y+1].nei - (kb[x-1][y+1].neiBoom + kb[x-1][y+1].neiMine)) < 2:
+                return True
+    if x < len(board) - 1 and y != 0:
+        if board[x+1][y-1].state == 'clear' and board[x+1][y-1].mine == False and board[x+1][y-1].nei > 4:
+            checkNeiHidden(kb,x+1,y-1)
+            checkNeiBoom(kb,x+1,y-1)
+            checkNeiMine(kb,x+1,y-1)
+            if kb[x+1][y-1].neiHidden - (kb[x+1][y-1].nei - (kb[x+1][y-1].neiBoom + kb[x+1][y-1].neiMine)) < 2:
+                return True
+    if x != 0 and y != 0:
+        if board[x-1][y-1].state == 'clear' and board[x-1][y-1].mine == False and board[x-1][y-1].nei > 4:
+            checkNeiHidden(kb,x-1,y-1)
+            checkNeiBoom(kb,x-1,y-1)
+            checkNeiMine(kb,x-1,y-1)
+            if kb[x-1][y-1].neiHidden - (kb[x-1][y-1].nei - (kb[x-1][y-1].neiBoom + kb[x-1][y-1].neiMine)) < 2:
+                return True
+    if x < len(board)-1 and y < len(board)-1:
+        if board[x+1][y+1].state == 'clear' and board[x+1][y+1].mine == False and board[x+1][y+1].nei > 4:
+            checkNeiHidden(kb,x+1,y+1)
+            checkNeiBoom(kb,x+1,y+1)
+            checkNeiMine(kb,x+1,y+1)
+            if kb[x+1][y+1].neiHidden - (kb[x+1][y+1].nei - (kb[x+1][y+1].neiBoom + kb[x+1][y+1].neiMine)) < 2:
+                return True
+    return False
+
 
 #Based on Cell information, generate solutions
 #if can find a solution that satisfies constraints, return true and the board
@@ -607,7 +848,7 @@ def countMined(board):
 def getData(x):
     sum = 0
     for i in range(x):
-        tmp = generateBoard(10,90)
+        tmp = generateBoard(10,10)
         while checkAllClear(tmp) == False:
             tmp = basicAI(tmp)
         print(countMined(tmp))
@@ -618,9 +859,9 @@ def getData(x):
 def getDataImp(x):
     sum = 0
     for i in range(x):
-        tmp = generateBoard(10,90)
+        tmp = generateBoard(10,10)
         while checkAllClear(tmp) == False:
-            tmp = improvedAI(tmp)
+            tmp = improvedAIBetter(tmp)
         print(countMined(tmp))
         sum = sum + countMined(tmp)
     print(sum)
@@ -628,6 +869,6 @@ def getDataImp(x):
 
 
 
-#getData(300)
-#getDataImp(300)
+#getData(150)
+#getDataImp(100)
 
